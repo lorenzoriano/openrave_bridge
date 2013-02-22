@@ -35,6 +35,8 @@ nosetests.xml
 .project
 .pydevproject
 
+*.pyc
+
 #misc ros stuff
 !__init__.py
 *.wpr
