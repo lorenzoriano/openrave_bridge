@@ -108,9 +108,9 @@ class PR2Robot(object):
         T = self.convertPose(pose)
         self.update_rave()
         worldFromEE = tf_for_link(T, manip, end_effector_link)
-        filter_options = openravepy.IkFilterOptions.IgnoreEndEffectorCollisions        
+        filter_options = openravepy.IkFilterOptions.CheckEnvCollisions
         if ignore_end_effector:
-            filter_options = filter_options | openravepy.IkFilterOptions.CheckEnvCollisions
+            filter_options = filter_options | openravepy.IkFilterOptions.IgnoreEndEffectorCollisions
         
         sol = manip.FindIKSolution(worldFromEE, filter_options)
         return sol
@@ -129,6 +129,8 @@ class PR2Robot(object):
             rospy.logerr("Could not find an IK solution!")
             return False
         self.controller.set_arm_state(sol.tolist(), "right", True)
+        self.update_rave()
+        return True        
     
     def move_left_arm(self, pose, ignore_end_effector = True):
         sol = self.find_leftarm_ik(pose, ignore_end_effector)
@@ -136,6 +138,8 @@ class PR2Robot(object):
             rospy.logerr("Could not find an IK solution!")
             return False
         self.controller.set_arm_state(sol.tolist(), "left", True)
+        self.update_rave()
+        return True
         
     def update_rave(self):
         ros_values = self.robot_state.last_joint_msg.position
@@ -143,23 +147,21 @@ class PR2Robot(object):
         self.robot.SetJointValues(rave_values[:20],self.rave_inds[:20])
         self.robot.SetJointValues(rave_values[20:],self.rave_inds[20:])
 
-def add_table(table_msg, env, tf_listener):
+def add_table(table_msg, env):
     assert isinstance(table_msg, TabletopDetectionResponse)
     body = openravepy.RaveCreateKinBody(env,'')
     body.SetName('table')
-    z = msg.detection.table.pose.pose.position.z
-    x_min = msg.detection.table.x_min
-    x_max = msg.detection.table.x_max
-    y_min = msg.detection.table.y_min
-    y_max = msg.detection.table.y_max
+    z = table_msg.detection.table.pose.pose.position.z
+    x_min = table_msg.detection.table.x_min
+    x_max = table_msg.detection.table.x_max
+    y_min = table_msg.detection.table.y_min
+    y_max = table_msg.detection.table.y_max
     
-    body = openravepy.RaveCreateKinBody(pr2.env,'')
-    body.SetName("table")
     x = (x_max-x_min)/2 + x_min
     y = (y_max-y_min)/2 + y_min
-    dim_x = (x_max - x_min)/2
-    dim_y = (y_max - y_min)/2
-    body.InitFromBoxes(np.array([[x, y, z, dim_x, dim_y, 0.01]]), True)
+    dim_x = (x_max - x_min)/2 + 0.1
+    dim_y = (y_max - y_min)/2 + 0.1
+    body.InitFromBoxes(np.array([[x, y, z, dim_x, dim_y, 0.06]]), True)
     env.Add(body, True)    
     
     return body
