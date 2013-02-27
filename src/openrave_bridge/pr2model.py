@@ -44,7 +44,26 @@ class PR2Robot(object):
         ros_names = joint_msg.name
         inds_ros2rave = np.array([self.robot.GetJointIndex(name) for name in ros_names])
         self.good_ros_inds = np.flatnonzero(inds_ros2rave != -1) # ros joints inds with matching rave joint
-        self.rave_inds = inds_ros2rave[self.good_ros_inds] # openrave indices corresponding to those joints        
+        self.rave_inds = inds_ros2rave[self.good_ros_inds] # openrave indices corresponding to those joints
+        
+        # make the joint limits match the PR2 soft limits
+        low_limits, high_limits = self.robot.GetDOFLimits()
+        rarm_low_limits = [-2.1353981634, -0.3536, -3.75, -2.1213, None, -2.0, None]
+        rarm_high_limits = [0.564601836603, 1.2963, 0.65, -0.15, None, -0.1, None]
+        for rarm_index, low, high in zip(self.robot.GetManipulator("rightarm").GetArmIndices(),
+                                         rarm_low_limits, rarm_high_limits):
+            if low is not None and high is not None:
+                low_limits[rarm_index] = low
+                high_limits[rarm_index] = high
+        larm_low_limits = [-0.564601836603, -0.3536, -0.65, -2.1213, None, -2.0, None]
+        larm_high_limits = [2.1353981634, 1.2963, 3.75, -0.15, None, -0.1, None]
+        for larm_index, low, high in zip(self.robot.GetManipulator("leftarm").GetArmIndices(),
+                                         larm_low_limits, larm_high_limits):
+            if low is not None and high is not None:
+                low_limits[larm_index] = low
+                high_limits[larm_index] = high
+        self.robot.SetDOFLimits(low_limits, high_limits)
+        
     
     def convertPose(self, pose):
         assert isinstance(pose, PoseStamped)
