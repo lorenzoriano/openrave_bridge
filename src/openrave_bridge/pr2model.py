@@ -76,7 +76,8 @@ class PR2Robot(object):
         matrix4 = np.dot(translation, orientation).squeeze()
         return matrix4
     
-    def __ik_solution(self, pose, manip, end_effector_link, ignore_end_effector=True):
+    def __ik_solution(self, pose, manip, end_effector_link, ignore_end_effector=True,
+                      multiple_soluitions = False):
         T = self.convertPose(pose)
         self.update_rave()
         worldFromEE = utils.tf_for_link(T, manip, end_effector_link)
@@ -84,16 +85,25 @@ class PR2Robot(object):
         if ignore_end_effector:
             filter_options = filter_options | openravepy.IkFilterOptions.IgnoreEndEffectorCollisions
         
-        sol = manip.FindIKSolution(worldFromEE, filter_options)
+        if multiple_soluitions:
+            sol = manip.FindIKSolutions(worldFromEE, filter_options)
+        else:
+            sol = manip.FindIKSolution(worldFromEE, filter_options)
         return sol
     
-    def find_rightarm_ik(self, pose, ignore_end_effector=True):
+    def find_rightarm_ik(self, pose, ignore_end_effector=True,
+                      multiple_soluitions = False):
         manip = self.robot.SetActiveManipulator("rightarm")
-        return self.__ik_solution(pose, manip, "r_wrist_roll_link", ignore_end_effector)
+        return self.__ik_solution(pose, manip, "r_wrist_roll_link",
+                                  ignore_end_effector, 
+                                  multiple_soluitions)
     
-    def find_leftarm_ik(self, pose, ignore_end_effector=True):
+    def find_leftarm_ik(self, pose, ignore_end_effector=True,
+                      multiple_soluitions = False):
         manip = self.robot.SetActiveManipulator("leftarm")
-        return self.__ik_solution(pose, manip, "l_wrist_roll_link", ignore_end_effector)    
+        return self.__ik_solution(pose, manip, "l_wrist_roll_link",
+                                  ignore_end_effector,
+                                  multiple_soluitions)    
     
     def move_right_arm(self, pose, ignore_end_effector = True):
         sol = self.find_rightarm_ik(pose, ignore_end_effector)
